@@ -8,8 +8,9 @@ Credits:  Code is built upon examples from
           http://programarcadegames.com/
 """
 import random
-from math import sin, cos, pi, atan2
+from math import sin, cos, pi, atan2, sqrt
 import pygame
+from pygame.locals import *
 
 # Define some colors
 BLACK = (0, 0, 0)
@@ -61,11 +62,20 @@ class Player(pygame.sprite.Sprite):
 
     def changespeed(self, x, y):
         """ Change the speed of the player"""
-        self.change_x += x
-        self.change_y += y
+        self.change_x = x
+        self.change_y = y
 
     def update(self):
         """ Find a new position for the player"""
+        if self.rect.left < 0:
+            self.rect.left = 0
+        elif self.rect.right > 800:
+            self.rect.right = 800
+        if self.rect.top <= 20:
+            self.rect.top = 20
+        elif self.rect.bottom >= 600:
+            self.rect.bottom = 600
+
         self.rect.x += self.change_x
         self.rect.y += self.change_y
 
@@ -86,8 +96,8 @@ class Enemy(pygame.sprite.Sprite):
 
         self.rect.x = pos[0]
         self.rect.y = pos[1]
-        print(self.rect.x, ",", self.rect.y)
-        self.speed = 3
+
+        self.speed = 2.75
 
     def update(self, target_pos):
         """ Follow the player"""
@@ -95,7 +105,6 @@ class Enemy(pygame.sprite.Sprite):
         self.pos = project(self.pos, self.angle, self.speed)
         self.rect.x = self.pos[0]
         self.rect.y = self.pos[1]
-        print(self.rect.x, ",", self.rect.y)
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -234,6 +243,12 @@ player.rect.x = SCREEN_WIDTH / 2
 player.rect.y = SCREEN_HEIGHT / 2
 
 SHOOT_EVENT = pygame.USEREVENT + 1
+x, y = 0, 0
+
+moveLeft = False
+moveRight = False
+moveUp = False
+moveDown = False
 
 
 def shoot(pos):
@@ -253,6 +268,7 @@ def shoot(pos):
 while not done:
     # --- Event Processing
     for event in pygame.event.get():
+        key = pygame.key.get_pressed()
         if event.type == pygame.QUIT:
             done = True
 
@@ -269,25 +285,45 @@ while not done:
         if event.type == pygame.MOUSEBUTTONUP:
             pygame.time.set_timer(pygame.USEREVENT + 1, 0)
 
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_a:
-                player.changespeed(-3, 0)
-            elif event.key == pygame.K_d:
-                player.changespeed(3, 0)
-            elif event.key == pygame.K_w:
-                player.changespeed(0, -3)
-            elif event.key == pygame.K_s:
-                player.changespeed(0, 3)
+        if event.type == KEYDOWN:
+            if event.key in (K_UP, K_w):
+                moveUp = True
+            elif event.key in (K_DOWN, K_s):
+                moveDown = True
+            elif event.key in (K_LEFT, K_a):
+                moveLeft = True
+            elif event.key in (K_RIGHT, K_d):
+                moveRight = True
 
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_a:
-                player.changespeed(3, 0)
-            elif event.key == pygame.K_d:
-                player.changespeed(-3, 0)
-            elif event.key == pygame.K_w:
-                player.changespeed(0, 3)
-            elif event.key == pygame.K_s:
-                player.changespeed(0, -3)
+        elif event.type == KEYUP:
+            if event.key in (K_LEFT, K_a):
+                moveLeft = False
+            elif event.key in (K_RIGHT, K_d):
+                moveRight = False
+            elif event.key in (K_UP, K_w):
+                moveUp = False
+            elif event.key in (K_DOWN, K_s):
+                moveDown = False
+
+        if moveUp and moveLeft:
+            player.changespeed(-2, -2)
+        elif moveUp and moveRight:
+            player.changespeed(2, -2)
+        elif moveDown and moveLeft:
+            player.changespeed(-2, 2)
+        elif moveDown and moveRight:
+            player.changespeed(2, 2)
+        elif moveUp:
+            player.changespeed(0, -3)
+        elif moveDown:
+            player.changespeed(0, 3)
+        elif moveLeft:
+            player.changespeed(-3, 0)
+        elif moveRight:
+            player.changespeed(3, 0)
+        else:
+            player.changespeed(0, 0)
+
     # --- Game logic
 
     # Call the update() method on all the sprites
