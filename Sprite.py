@@ -8,7 +8,7 @@ Credits:  Code is built upon examples from
           http://programarcadegames.com/
 """
 import random
-import math
+from math import sin, cos, pi, atan2
 import pygame
 
 # Define some colors
@@ -16,6 +16,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -44,7 +45,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
 
         self.image = pygame.Surface([20, 20])
-        self.image.fill(RED)
+        self.image.fill(BLUE)
 
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -55,6 +56,9 @@ class Player(pygame.sprite.Sprite):
         self.change_x = 0
         self.change_y = 0
 
+    def getPlayerPos(self):
+        return (self.rect.x, self.rect.y)
+
     def changespeed(self, x, y):
         """ Change the speed of the player"""
         self.change_x += x
@@ -64,6 +68,34 @@ class Player(pygame.sprite.Sprite):
         """ Find a new position for the player"""
         self.rect.x += self.change_x
         self.rect.y += self.change_y
+
+
+class Enemy(pygame.sprite.Sprite):
+    """ This class represents the Enemy. """
+
+    def __init__(self, pos, target_pos):
+        """ Place the enemy on creation. """
+        # Call the parent class (Sprite) constructor
+        super().__init__()
+        self.pos = pos
+        self.image = pygame.Surface([20, 20])
+        self.image.fill(RED)
+
+        self.rect = self.image.get_rect()
+        self.angle = get_angle(self.pos, target_pos)
+
+        self.rect.x = pos[0]
+        self.rect.y = pos[1]
+        print(self.rect.x, ",", self.rect.y)
+        self.speed = 3
+
+    def update(self, target_pos):
+        """ Follow the player"""
+        self.angle = get_angle(self.pos, target_pos)
+        self.pos = project(self.pos, self.angle, self.speed)
+        self.rect.x = self.pos[0]
+        self.rect.y = self.pos[1]
+        print(self.rect.x, ",", self.rect.y)
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -99,13 +131,13 @@ class Bullet(pygame.sprite.Sprite):
         # and end points. This is the angle the bullet will travel.
         x_diff = dest_x - start_x
         y_diff = dest_y - start_y
-        angle = math.atan2(y_diff, x_diff)
+        angle = atan2(y_diff, x_diff)
 
         # Taking into account the angle, calculate our change_x
         # and change_y. Velocity is how fast the bullet travels.
         velocity = 7
-        self.change_x = math.cos(angle) * velocity
-        self.change_y = math.sin(angle) * velocity
+        self.change_x = cos(angle) * velocity
+        self.change_y = sin(angle) * velocity
 
     def update(self):
         """ Move the bullet. """
@@ -122,6 +154,25 @@ class Bullet(pygame.sprite.Sprite):
         if self.rect.x < 0 or self.rect.x > SCREEN_WIDTH or self.rect.y < 0 or self.rect.y > SCREEN_HEIGHT:
             self.kill()
 
+
+# Define some functions
+def get_angle(origin, destination):
+    """Returns angle in radians from origin to destination.
+    This is the angle that you would get if the points were
+    on a cartesian grid. Arguments of (0,0), (1, -1)
+    return .25pi(45 deg) rather than 1.75pi(315 deg).
+    """
+    x_dist = destination[0] - origin[0]
+    y_dist = destination[1] - origin[1]
+    return atan2(-y_dist, x_dist) % (2 * pi)
+
+
+def project(pos, angle, distance):
+    """Returns tuple of pos projected distance at angle
+    adjusted for pygame's y-axis.
+    """
+    return (pos[0] + (cos(angle) * distance),
+            pos[1] - (sin(angle) * distance))
 
 # --- Create the window
 
@@ -143,11 +194,14 @@ block_list = pygame.sprite.Group()
 # List of each bullet
 bullet_list = pygame.sprite.Group()
 
+# List of each enemy
+enemy_list = pygame.sprite.Group()
+
 # --- Create the sprites
 
 for i in range(50):
     # This represents a block
-    block = Block(BLUE)
+    block = Block(GREEN)
 
     # Set a random location for the block
     block.rect.x = random.randrange(SCREEN_WIDTH)
@@ -160,6 +214,13 @@ for i in range(50):
 # Create a red player block
 player = Player(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
 all_sprites_list.add(player)
+
+# Create enemy
+enemy = Enemy((200, 200), player.getPlayerPos())
+enemy.rect.x = 200
+enemy.rect.y = 200
+enemy_list.add(enemy)
+
 
 # Loop until the user clicks the close button.
 done = False
@@ -197,13 +258,13 @@ while not done:
 
         # Fire a bullet if the user clicks the mouse button
         if event.type == pygame.MOUSEBUTTONDOWN:
-            pos = pygame.mouse.get_pos()
-            shoot(pos)
+            m_pos = pygame.mouse.get_pos()
+            shoot(m_pos)
             pygame.time.set_timer(pygame.USEREVENT + 1, 100)
 
         if event.type == SHOOT_EVENT:
-            pos = pygame.mouse.get_pos()
-            shoot(pos)
+            m_pos = pygame.mouse.get_pos()
+            shoot(m_pos)
 
         if event.type == pygame.MOUSEBUTTONUP:
             pygame.time.set_timer(pygame.USEREVENT + 1, 0)
@@ -231,7 +292,7 @@ while not done:
 
     # Call the update() method on all the sprites
     all_sprites_list.update()
-
+    enemy_list.update(player.getPlayerPos())
     # Calculate mechanics for each bullet
     for bullet in bullet_list:
 
@@ -257,7 +318,7 @@ while not done:
 
     # Draw all the spites
     all_sprites_list.draw(screen)
-
+    enemy_list.draw(screen)
     # Go ahead and update the screen with what we've drawn.
     pygame.display.flip()
 
