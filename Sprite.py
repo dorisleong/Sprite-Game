@@ -17,13 +17,14 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 
-SCREEN_WIDTH = 700
-SCREEN_HEIGHT = 400
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
 # --- Classes
 
 
 class Block(pygame.sprite.Sprite):
     """ This class represents the block. """
+
     def __init__(self, color):
         # Call the parent class (Sprite) constructor
         super().__init__()
@@ -48,7 +49,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
- 
+
         # -- Attributes
         # Set speed vector
         self.change_x = 0
@@ -58,11 +59,12 @@ class Player(pygame.sprite.Sprite):
         """ Change the speed of the player"""
         self.change_x += x
         self.change_y += y
- 
+
     def update(self):
         """ Find a new position for the player"""
         self.rect.x += self.change_x
         self.rect.y += self.change_y
+
 
 class Bullet(pygame.sprite.Sprite):
     """ This class represents the bullet. """
@@ -77,7 +79,7 @@ class Bullet(pygame.sprite.Sprite):
         super().__init__()
 
         # Set up the image for the bullet
-        self.image = pygame.Surface([4, 10])
+        self.image = pygame.Surface([4, 4])
         self.image.fill(BLACK)
 
         self.rect = self.image.get_rect()
@@ -101,7 +103,7 @@ class Bullet(pygame.sprite.Sprite):
 
         # Taking into account the angle, calculate our change_x
         # and change_y. Velocity is how fast the bullet travels.
-        velocity = 5
+        velocity = 7
         self.change_x = math.cos(angle) * velocity
         self.change_y = math.sin(angle) * velocity
 
@@ -119,7 +121,6 @@ class Bullet(pygame.sprite.Sprite):
         # If the bullet flies of the screen, get rid of it.
         if self.rect.x < 0 or self.rect.x > SCREEN_WIDTH or self.rect.y < 0 or self.rect.y > SCREEN_HEIGHT:
             self.kill()
-
 
 
 # --- Create the window
@@ -171,6 +172,22 @@ score = 0
 player.rect.x = SCREEN_WIDTH / 2
 player.rect.y = SCREEN_HEIGHT / 2
 
+SHOOT_EVENT = pygame.USEREVENT + 1
+
+
+def shoot(pos):
+    # Get the mouse position
+    mouse_x = pos[0]
+    mouse_y = pos[1]
+
+    # Create the bullet based on where we are, and where we want to
+    # go.
+    bullet = Bullet(player.rect.x, player.rect.y, mouse_x, mouse_y)
+
+    # Add the bullet to the lists
+    all_sprites_list.add(bullet)
+    bullet_list.add(bullet)
+
 # -------- Main Program Loop -----------
 while not done:
     # --- Event Processing
@@ -178,40 +195,37 @@ while not done:
         if event.type == pygame.QUIT:
             done = True
 
-        elif pygame.mouse.get_pressed()[0]:
-            # Fire a bullet if the user clicks the mouse button
-
-            # Get the mouse position
+        # Fire a bullet if the user clicks the mouse button
+        if event.type == pygame.MOUSEBUTTONDOWN:
             pos = pygame.mouse.get_pos()
+            shoot(pos)
+            pygame.time.set_timer(pygame.USEREVENT + 1, 100)
 
-            mouse_x = pos[0]
-            mouse_y = pos[1]
+        if event.type == SHOOT_EVENT:
+            pos = pygame.mouse.get_pos()
+            shoot(pos)
 
-            # Create the bullet based on where we are, and where we want to go.
-            bullet = Bullet(player.rect.x, player.rect.y, mouse_x, mouse_y)
-
-            # Add the bullet to the lists
-            all_sprites_list.add(bullet)
-            bullet_list.add(bullet)
+        if event.type == pygame.MOUSEBUTTONUP:
+            pygame.time.set_timer(pygame.USEREVENT + 1, 0)
 
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_a:
                 player.changespeed(-3, 0)
-            elif event.key == pygame.K_RIGHT:
+            elif event.key == pygame.K_d:
                 player.changespeed(3, 0)
-            elif event.key == pygame.K_UP:
+            elif event.key == pygame.K_w:
                 player.changespeed(0, -3)
-            elif event.key == pygame.K_DOWN:
+            elif event.key == pygame.K_s:
                 player.changespeed(0, 3)
 
         if event.type == pygame.KEYUP:
-            if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_a:
                 player.changespeed(3, 0)
-            elif event.key == pygame.K_RIGHT:
+            elif event.key == pygame.K_d:
                 player.changespeed(-3, 0)
-            elif event.key == pygame.K_UP:
+            elif event.key == pygame.K_w:
                 player.changespeed(0, 3)
-            elif event.key == pygame.K_DOWN:
+            elif event.key == pygame.K_s:
                 player.changespeed(0, -3)
     # --- Game logic
 
@@ -231,8 +245,8 @@ while not done:
             score += 1
             print(score)
 
-        # Remove the bullet if it flies up off the screen
-        if bullet.rect.y < -10:
+        # Remove the bullet if it flies off the screen
+        if bullet.rect.y < -10 or bullet.rect.y > SCREEN_HEIGHT + 10 or bullet.rect.x < -10 or bullet.rect.x > SCREEN_WIDTH + 10:
             bullet_list.remove(bullet)
             all_sprites_list.remove(bullet)
 
