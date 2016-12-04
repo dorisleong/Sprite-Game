@@ -8,7 +8,7 @@ Credits:  Code is built upon examples from
           http://programarcadegames.com/
 """
 import random
-from math import sin, cos, pi, atan2, sqrt
+from math import sin, cos, pi, atan2
 import pygame
 from pygame.locals import *
 
@@ -226,8 +226,6 @@ all_sprites_list.add(player)
 
 # Create enemy
 enemy = Enemy((200, 200), player.getPlayerPos())
-enemy.rect.x = 200
-enemy.rect.y = 200
 enemy_list.add(enemy)
 
 
@@ -243,6 +241,8 @@ player.rect.x = SCREEN_WIDTH / 2
 player.rect.y = SCREEN_HEIGHT / 2
 
 SHOOT_EVENT = pygame.USEREVENT + 1
+ENEMY_SPAWN_EVENT = pygame.USEREVENT + 2
+pygame.time.set_timer(pygame.USEREVENT + 2, 1000)
 x, y = 0, 0
 
 moveLeft = False
@@ -281,6 +281,20 @@ while not done:
         if event.type == SHOOT_EVENT:
             m_pos = pygame.mouse.get_pos()
             shoot(m_pos)
+
+        if event.type == ENEMY_SPAWN_EVENT:
+            # TODO spawn outside certain range of player
+            if len(enemy_list) < 5:
+                close = True
+                while close:
+                    random_pos = (random.randrange(SCREEN_WIDTH),
+                                  random.randrange(20, SCREEN_HEIGHT - 50))
+                    x_distance_to_player = abs(random_pos[0] - player.rect.x)
+                    y_distance_to_player = abs(random_pos[1] - player.rect.y)
+                    if x_distance_to_player > 100 and y_distance_to_player > 100:
+                        close = False
+                enemy = Enemy(random_pos, player.getPlayerPos())
+                enemy_list.add(enemy)
 
         if event.type == pygame.MOUSEBUTTONUP:
             pygame.time.set_timer(pygame.USEREVENT + 1, 0)
@@ -332,8 +346,9 @@ while not done:
     # Calculate mechanics for each bullet
     for bullet in bullet_list:
 
-        # See if it hit a block
+        # See if it hit a block or enemy
         block_hit_list = pygame.sprite.spritecollide(bullet, block_list, True)
+        enemy_hit_list = pygame.sprite.spritecollide(bullet, enemy_list, True)
 
         # For each block hit, remove the bullet and add to the score
         for block in block_hit_list:
@@ -342,11 +357,20 @@ while not done:
             score += 1
             print(score)
 
+        for enemy in enemy_hit_list:
+            bullet_list.remove(bullet)
+            all_sprites_list.remove(bullet)
+            score += 10
+            print("Enemy killed -> ", score)
+
         # Remove the bullet if it flies off the screen
         if bullet.rect.y < -10 or bullet.rect.y > SCREEN_HEIGHT + 10 or bullet.rect.x < -10 or bullet.rect.x > SCREEN_WIDTH + 10:
             bullet_list.remove(bullet)
             all_sprites_list.remove(bullet)
 
+    if pygame.sprite.spritecollideany(player, enemy_list) != None:
+        print("Player was hit!")
+        enemy_list.remove(pygame.sprite.spritecollideany(player, enemy_list))
     # --- Draw a frame
 
     # Clear the screen
